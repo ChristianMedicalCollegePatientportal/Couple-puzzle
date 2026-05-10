@@ -83,8 +83,7 @@ app.get('/play/:id', (req, res) => {
 
 // ── SERVE SENDER PAGE ──
 app.get('/sender', (req, res) => {
-  res.sendFile(path.join(__dirname, 'sender.html'));
+  res.sendFile(path.join(__dirname, 'public', 'sender.html'));
 });
 
 app.listen(PORT, () => console.log(`💌 Puzzle app running on port ${PORT}`));
-
