@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💌 A Puzzle For You</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --rose: #b5344a;
+    --blush: #f2d4d9;
+    --cream: #fdf8f4;
+    --gold: #c9a050;
+    --dark: #2a1520;
+    --muted: #8a6570;
+  }
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; padding: 20px;
+    background-image:
+      radial-gradient(ellipse at 10% 10%, #fce8ec 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 90%, #fceee6 0%, transparent 55%);
+  }
+
+  #loading, #error-screen { text-align: center; margin-top: 80px; }
+  #loading p { color: var(--muted); font-size: 1rem; margin-top: 12px; }
+  .spin-heart { font-size: 2.5rem; display: inline-block; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+  #error-screen { color: var(--rose); font-size: 1.1rem; }
+
+  #game { display: none; width: 100%; max-width: 540px; }
+
+  .game-header { text-align: center; margin-bottom: 16px; }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    color: var(--rose); font-weight: 600;
+  }
+  .subtitle {
+    font-size: 0.75rem; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted); margin-top: 3px;
+  }
+
+  .progress-wrap { margin: 12px 0 4px; }
+  .progress-track {
+    background: var(--blush); border-radius: 99px;
+    height: 6px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rose), var(--gold));
+    border-radius: 99px; width: 0%;
+    transition: width 0.4s ease;
+  }
+  .progress-label {
+    font-size: 0.72rem; color: var(--muted);
+    text-align: right; margin-top: 4px; letter-spacing: 1px;
+  }
+
+  .hint {
+    font-size: 0.78rem; color: var(--muted);
+    text-align: center; margin-bottom: 12px;
+  }
+
+  .boards-wrap {
+    display: flex; gap: 14px;
+    justify-content: center; flex-wrap: wrap;
+  }
+
+  .board-section { text-align: center; }
+  .board-title {
+    font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 8px;
+  }
+
+  .board {
+    display: grid; gap: 3px;
+    background: white; padding: 6px;
+    border-radius: 14px;
+    border: 1.5px solid var(--blush);
+    box-shadow: 0 4px 20px rgba(181,52,74,0.07);
+  }
+
+  .piece {
+    width: var(--tile); height: var(--tile);
+    background-size: cover;
+    border-radius: 6px; cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    border: 2px solid transparent;
+    user-select: none; touch-action: none;
+  }
+  .piece:active { cursor: grabbing; }
+  .piece.dragging { opacity: 0.4; transform: scale(0.9); }
+  .piece.drag-over { border-color: var(--rose); transform: scale(1.06); box-shadow: 0 0 0 3px rgba(181,52,74,0.25); }
+  .piece.locked { cursor: default; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,160,80,0.35); }
+
+  .slot {
+    width: var(--tile); height: var(--tile);
+    border-radius: 6px; border: 2px dashed var(--blush);
+    background: #fff9fb; transition: border-color 0.2s, background 0.2s;
+    overflow: hidden;
+  }
+  .slot.filled { border-color: var(--gold); }
+  .slot.drag-over { border-color: var(--rose); background: #fff0f3; }
+
+  /* WIN */
+  #win-screen {
+    display: none; position: fixed; inset: 0;
+    background: rgba(42,21,32,0.88);
+    z-index: 999; align-items: center;
+    justify-content: center; flex-direction: column; padding: 20px;
+  }
+  .win-card {
+    background: var(--cream); border-radius: 24px;
+    padding: 30px 24px; max-width: 360px; width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+
+  .win-emoji { font-size: 2.8rem; margin-bottom: 8px; }
+  .win-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.9rem; color: var(--rose); margin-bottom: 4px;
+  }
+  #revealed-img {
+    width: 100%; border-radius: 14px;
+    border: 3px solid var(--gold); margin: 14px 0;
+    box-shadow: 0 6px 30px rgba(201,160,80,0.25);
+  }
+  .win-msg {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem; font-style: italic;
+    color: var(--dark); line-height: 1.7; margin: 10px 0;
+  }
+  .replay-btn {
+    margin-top: 12px; padding: 12px 26px;
+    background: var(--rose); color: white; border: none;
+    border-radius: 10px; font-family: 'Jost', sans-serif;
+    font-size: 0.9rem; cursor: pointer;
+  }
+
+  /* CONFETTI */
+  .confetti-piece {
+    position: fixed; border-radius: 2px;
+    top: -20px; animation: fall linear forwards;
+    z-index: 1000; pointer-events: none;
+  }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spin-heart">💌</div>
+  <p>Loading your puzzle…</p>
+</div>
+
+<div id="error-screen" style="display:none">
+  <p>😕 Puzzle not found.<br><small>The link may have expired.</small></p>
+</div>
+
+<div id="game">
+  <div class="game-header">
+    <h1>💌 A Puzzle For You</h1>
+    <p class="subtitle" id="diff-label">solve the puzzle</p>
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+      <p class="progress-label" id="prog-label">0 / 0 placed correctly</p>
+    </div>
+  </div>
+  <p class="hint">👆 Drag a piece · Drop it in the right spot</p>
+  <div class="boards-wrap">
+    <div class="board-section">
+      <p class="board-title">🧩 Pieces</p>
+      <div class="board" id="pieces-board"></div>
+    </div>
+    <div class="board-section">
+      <p class="board-title">🖼️ Board</p>
+      <div class="board" id="puzzle-board"></div>
+    </div>
+  </div>
+</div>
+
+<div id="win-screen">
+  <div class="win-card">
+    <div class="win-emoji">🎉</div>
+    <div class="win-title">You did it!</div>
+    <img id="revealed-img" alt="Revealed">
+    <div class="win-msg" id="win-msg"></div>
+    <button class="replay-btn" onclick="replayPuzzle()">Play Again 🔄</button>
+  </div>
+</div>
+
+<script>
+  let puzzle = null;
+  let gridSize = 3;
+  let tileSize = 90;
+  let placed = {};
+  let draggingPiece = null;
+  let draggingFrom = null;
+
+  // ── LOAD PUZZLE ──
+  async function loadPuzzle() {
+    const id = location.pathname.split('/').pop();
+    try {
+      const res = await fetch('/api/puzzle/' + id);
+      if (!res.ok) throw new Error('not found');
+      puzzle = await res.json();
+      gridSize = puzzle.difficulty || 3;
+      document.getElementById('loading').style.display = 'none';
+      buildGame();
+    } catch(e) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-screen').style.display = 'block';
+    }
+  }
+
+  function buildGame() {
+    const total = gridSize * gridSize;
+    const screenW = Math.min(window.innerWidth - 48, 540);
+    tileSize = Math.floor((screenW / 2 - 40) / gridSize);
+    tileSize = Math.max(46, Math.min(tileSize, 100));
+    document.documentElement.style.setProperty('--tile', tileSize + 'px');
+
+    placed = {};
+    const pieces = shuffle([...Array(total).keys()]);
+
+    const pBoard = document.getElementById('pieces-board');
+    const sBoard = document.getElementById('puzzle-board');
+    pBoard.style.gridTemplateColumns = `repeat(${gridSize}, ${tileSize}px)`;
+    sBoard.style.gridTemplateColumns = `repeat(${gridSize}, ${tileSize}px)`;
+    pBoard.innerHTML = '';
+    sBoard.innerHTML = '';
+
+    document.getElementById('diff-label').textContent =
+      gridSize + '×' + gridSize + ' puzzle — ' + total + ' pieces';
+
+    pieces.forEach(idx => {
+      const el = makePiece(idx);
+      el.dataset.location = 'pool';
+      pBoard.appendChild(el);
+    });
+
+    for (let s = 0; s < total; s++) {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.dataset.slotIdx = s;
+      slot.id = 'slot-' + s;
+      addSlotListeners(slot);
+      sBoard.appendChild(slot);
+    }
+
+    document.getElementById('game').style.display = 'block';
+    updateProgress();
+    initTouchDrag();
+  }
+
+  function makePiece(idx) {
+    const el = document.createElement('div');
+    el.className = 'piece';
+    el.id = 'piece-' + idx;
+    el.dataset.pieceIdx = idx;
+    const col = idx % gridSize;
+    const row = Math.floor(idx / gridSize);
+    const bx = gridSize > 1 ? (col / (gridSize - 1)) * 100 : 0;
+    const by = gridSize > 1 ? (row / (gridSize - 1)) * 100 : 0;
+    el.style.backgroundImage = `url(${puzzle.imagePath})`;
+    el.style.backgroundSize = `${gridSize * 100}%`;
+    el.style.backgroundPosition = `${bx}% ${by}%`;
+    el.draggable = true;
+    el.addEventListener('dragstart', onDS);
+    el.addEventListener('dragend', onDE);
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation();
+      el.classList.remove('drag-over');
+      if (el.dataset.location !== 'pool') dropToSlot(parseInt(el.dataset.slotIdx));
+    });
+    return el;
+  }
+
+  function addSlotListeners(slot) {
+    slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+    slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+    slot.addEventListener('drop', e => {
+      e.preventDefault(); slot.classList.remove('drag-over');
+      dropToSlot(parseInt(slot.dataset.slotIdx));
+    });
+  }
+
+  function onDS(e) {
+    const el = e.currentTarget;
+    draggingPiece = parseInt(el.dataset.pieceIdx);
+    draggingFrom = el.dataset.location === 'pool' ? 'pool' : parseInt(el.dataset.slotIdx);
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function onDE(e) { e.currentTarget.classList.remove('dragging'); draggingPiece = null; draggingFrom = null; }
+
+  function dropToSlot(slotIdx) {
+    if (draggingPiece === null) return;
+    const slot = document.getElementById('slot-' + slotIdx);
+
+    if (placed[slotIdx] !== undefined) {
+      if (placed[slotIdx] === draggingPiece) return;
+      returnToPool(placed[slotIdx]);
+    }
+
+    if (typeof draggingFrom === 'number') {
+      clearSlot(draggingFrom);
+    } else {
+      const el = document.getElementById('piece-' + draggingPiece);
+      if (el) el.remove();
+    }
+
+    placed[slotIdx] = draggingPiece;
+    const el = makePiece(draggingPiece);
+    el.dataset.location = 'slot';
+    el.dataset.slotIdx = slotIdx;
+    slot.innerHTML = ''; slot.appendChild(el); slot.classList.add('filled');
+
+    if (draggingPiece === slotIdx) {
+      el.classList.add('locked'); el.draggable = false;
+    }
+    updateProgress(); checkWin();
+  }
+
+  function clearSlot(idx) {
+    const slot = document.getElementById('slot-' + idx);
+    slot.innerHTML = ''; slot.classList.remove('filled');
+    delete placed[idx];
+  }
+
+  function returnToPool(pieceIdx) {
+    const old = document.getElementById('piece-' + pieceIdx);
+    if (old) old.remove();
+    const el = makePiece(pieceIdx);
+    el.dataset.location = 'pool';
+    document.getElementById('pieces-board').appendChild(el);
+    const key = Object.keys(placed).find(k => placed[k] === pieceIdx);
+    if (key !== undefined) delete placed[key];
+  }
+
+  function updateProgress() {
+    const total = gridSize * gridSize;
+    const correct = Object.keys(placed).filter(s => placed[s] === parseInt(s)).length;
+    document.getElementById('prog-fill').style.width = (correct / total * 100) + '%';
+    document.getElementById('prog-label').textContent = correct + ' / ' + total + ' placed correctly';
+  }
+
+  function checkWin() {
+    const total = gridSize * gridSize;
+    const correct = Object.keys(placed).filter(s => placed[s] === parseInt(s)).length;
+    if (correct === total) setTimeout(showWin, 400);
+  }
+
+  function showWin() {
+    launchConfetti();
+    document.getElementById('revealed-img').src = puzzle.imagePath;
+    document.getElementById('win-msg').textContent = puzzle.message;
+    document.getElementById('win-screen').style.display = 'flex';
+  }
+
+  function replayPuzzle() {
+    document.getElementById('win-screen').style.display = 'none';
+    buildGame();
+  }
+
+  function launchConfetti() {
+    const colors = ['#b5344a','#c9a050','#f5a7b5','#f8d56a','#a8d8a8','#8ecae6'];
+    for (let i = 0; i < 90; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.width = (Math.random() * 8 + 5) + 'px';
+      c.style.height = (Math.random() * 8 + 5) + 'px';
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+      c.style.animationDelay = (Math.random() * 1.5) + 's';
+      document.body.appendChild(c);
+      c.addEventListener('animationend', () => c.remove());
+    }
+  }
+
+  function initTouchDrag() {
+    let tPiece = null, tFrom = null, ghost = null;
+
+    document.addEventListener('touchstart', e => {
+      const el = e.target.closest('.piece');
+      if (!el || el.classList.contains('locked')) return;
+      tPiece = parseInt(el.dataset.pieceIdx);
+      tFrom = el.dataset.location === 'pool' ? 'pool' : parseInt(el.dataset.slotIdx);
+      ghost = el.cloneNode(true);
+      ghost.style.cssText = `position:fixed;width:${tileSize}px;height:${tileSize}px;opacity:0.75;pointer-events:none;z-index:9999;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.3);`;
+      document.body.appendChild(ghost);
+      el.style.opacity = '0.35';
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (!ghost) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      ghost.style.left = (t.clientX - tileSize / 2) + 'px';
+      ghost.style.top = (t.clientY - tileSize / 2) + 'px';
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('drag-over'));
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (el) { const s = el.closest('.slot'); if (s) s.classList.add('drag-over'); }
+    }, { passive: false });
+
+    document.addEventListener('touchend', e => {
+      if (!ghost) return;
+      const t = e.changedTouches[0];
+      ghost.remove(); ghost = null;
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('drag-over'));
+      const orig = document.getElementById('piece-' + tPiece);
+      if (orig) orig.style.opacity = '';
+      const target = document.elementFromPoint(t.clientX, t.clientY);
+      if (target) {
+        const slot = target.closest('.slot');
+        if (slot) { draggingPiece = tPiece; draggingFrom = tFrom; dropToSlot(parseInt(slot.dataset.slotIdx)); }
+      }
+      tPiece = null; tFrom = null;
+    });
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  loadPuzzle();
+</script>
+</body>
+</html>
