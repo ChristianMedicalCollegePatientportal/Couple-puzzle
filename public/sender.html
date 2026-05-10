@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💌 Create a Puzzle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --rose: #b5344a;
+    --blush: #f2d4d9;
+    --cream: #fdf8f4;
+    --gold: #c9a050;
+    --dark: #2a1520;
+    --muted: #8a6570;
+  }
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image:
+      radial-gradient(ellipse at 10% 10%, #fce8ec 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 90%, #fceee6 0%, transparent 55%);
+  }
+
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 36px 28px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 12px 50px rgba(181,52,74,0.1);
+    border: 1px solid var(--blush);
+  }
+
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo-icon { font-size: 2.4rem; display: block; margin-bottom: 8px; }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    color: var(--rose);
+    text-align: center;
+    font-weight: 600;
+  }
+  .tagline {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    margin-bottom: 0;
+  }
+
+  /* LOGIN */
+  #login-section { }
+  #app-section { display: none; }
+
+  .field { margin-top: 20px; }
+  .label {
+    font-size: 0.72rem;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+    display: block;
+  }
+
+  input[type="password"],
+  input[type="text"],
+  textarea {
+    width: 100%;
+    padding: 13px 15px;
+    border: 1.5px solid var(--blush);
+    border-radius: 12px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    color: var(--dark);
+    background: #fff9fb;
+    outline: none;
+    transition: border 0.2s;
+  }
+  input:focus, textarea:focus { border-color: var(--rose); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .upload-area {
+    border: 2px dashed var(--blush);
+    border-radius: 14px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    background: #fff9fb;
+  }
+  .upload-area:hover { border-color: var(--rose); background: #fff0f3; }
+  .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-area p { color: var(--muted); font-size: 0.85rem; }
+
+  #thumb {
+    width: 100%; max-height: 200px; object-fit: cover;
+    border-radius: 10px; margin-top: 12px; display: none;
+    border: 2px solid var(--blush);
+  }
+
+  .diff-row { display: flex; gap: 8px; margin-top: 8px; }
+  .diff-btn {
+    flex: 1; padding: 10px 4px;
+    border: 1.5px solid var(--blush); border-radius: 10px;
+    background: white; cursor: pointer;
+    font-family: 'Jost', sans-serif; font-size: 0.78rem;
+    color: var(--muted); transition: all 0.2s; text-align: center;
+  }
+  .diff-btn:hover { border-color: var(--rose); color: var(--rose); }
+  .diff-btn.active { border-color: var(--rose); background: var(--rose); color: white; }
+  .diff-btn strong { display: block; font-size: 0.92rem; }
+
+  .btn {
+    width: 100%; margin-top: 22px; padding: 15px;
+    background: linear-gradient(135deg, var(--rose), #8f2035);
+    color: white; border: none; border-radius: 12px;
+    font-family: 'Cormorant Garamond', serif; font-size: 1.15rem;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(181,52,74,0.3);
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(181,52,74,0.4); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .error { color: var(--rose); font-size: 0.82rem; margin-top: 8px; text-align: center; }
+
+  /* SUCCESS */
+  #success-box {
+    display: none;
+    background: #fff5f7;
+    border: 1.5px solid var(--blush);
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 20px;
+    text-align: center;
+  }
+  #success-box .s-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem; color: var(--rose); margin-bottom: 8px;
+  }
+  #success-box .s-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 14px; }
+  #link-box {
+    background: white; border: 1.5px solid var(--blush);
+    border-radius: 10px; padding: 12px; word-break: break-all;
+    font-size: 0.82rem; color: var(--dark); margin-bottom: 12px;
+  }
+  .copy-btn {
+    padding: 10px 22px;
+    background: var(--gold); color: white; border: none;
+    border-radius: 10px; font-family: 'Jost', sans-serif;
+    font-size: 0.88rem; cursor: pointer;
+  }
+  .new-btn {
+    display: block; margin-top: 10px;
+    background: none; border: none; color: var(--muted);
+    font-size: 0.8rem; cursor: pointer; text-decoration: underline;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .spinner {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">💌</span>
+    <h1>Puzzle For You</h1>
+    <p class="tagline">Sender's Studio</p>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="login-section">
+    <p style="text-align:center;color:var(--muted);font-size:0.88rem;margin-bottom:4px;">Enter your sender password to continue</p>
+    <div class="field">
+      <label class="label">Password</label>
+      <input type="password" id="pwd-input" placeholder="Your secret password" autocomplete="off">
+    </div>
+    <p class="error" id="login-error"></p>
+    <button class="btn" id="login-btn">Enter ✨</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app-section">
+    <div class="field">
+      <label class="label">📷 Upload Your Photo</label>
+      <div class="upload-area">
+        <input type="file" id="photo-input" accept="image/*">
+        <div class="upload-icon">🖼️</div>
+        <p>Tap to choose from gallery</p>
+      </div>
+      <img id="thumb" alt="preview">
+    </div>
+
+    <div class="field">
+      <label class="label">Difficulty</label>
+      <div class="diff-row">
+        <button class="diff-btn active" data-grid="3"><strong>Easy</strong>3×3</button>
+        <button class="diff-btn" data-grid="4"><strong>Medium</strong>4×4</button>
+        <button class="diff-btn" data-grid="5"><strong>Hard</strong>5×5</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label">💬 Your Message (shown when solved)</label>
+      <textarea id="msg-input" placeholder="e.g. You cracked the code, just like you cracked open my heart ❤️"></textarea>
+    </div>
+
+    <p class="error" id="upload-error"></p>
+    <button class="btn" id="create-btn" disabled>Create & Get Link 🔗</button>
+
+    <div id="success-box">
+      <div class="s-title">🎉 Puzzle Ready!</div>
+      <div class="s-sub">Share this link with your partner</div>
+      <div id="link-box"></div>
+      <button class="copy-btn" id="copy-btn">📋 Copy Link</button>
+      <button class="new-btn" id="new-btn">Create another puzzle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedGrid = 3;
+  let password = '';
+
+  // LOGIN
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const pwd = document.getElementById('pwd-input').value.trim();
+    if (!pwd) return;
+    const btn = document.getElementById('login-btn');
+    btn.innerHTML = '<span class="spinner"></span>Checking...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        password = pwd;
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('app-section').style.display = 'block';
+      } else {
+        document.getElementById('login-error').textContent = '❌ Wrong password. Try again.';
+        btn.innerHTML = 'Enter ✨';
+        btn.disabled = false;
+      }
+    } catch(e) {
+      document.getElementById('login-error').textContent = '⚠️ Connection error. Try again.';
+      btn.innerHTML = 'Enter ✨';
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('pwd-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+
+  // PHOTO
+  document.getElementById('photo-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const thumb = document.getElementById('thumb');
+    thumb.src = URL.createObjectURL(file);
+    thumb.style.display = 'block';
+    document.getElementById('create-btn').disabled = false;
+  });
+
+  // DIFFICULTY
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedGrid = parseInt(btn.dataset.grid);
+    });
+  });
+
+  // CREATE
+  document.getElementById('create-btn').addEventListener('click', async () => {
+    const file = document.getElementById('photo-input').files[0];
+    if (!file) return;
+    const msg = document.getElementById('msg-input').value.trim();
+    const btn = document.getElementById('create-btn');
+    btn.innerHTML = '<span class="spinner"></span>Uploading...';
+    btn.disabled = true;
+    document.getElementById('upload-error').textContent = '';
+
+    const form = new FormData();
+    form.append('photo', file);
+    form.append('password', password);
+    form.append('message', msg);
+    form.append('difficulty', selectedGrid);
+
+    try {
+      const res = await fetch('/api/create', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('link-box').textContent = data.link;
+        document.getElementById('success-box').style.display = 'block';
+        btn.innerHTML = 'Create & Get Link 🔗';
+        btn.disabled = false;
+      } else {
+        document.getElementById('upload-error').textContent = '❌ ' + (data.error || 'Something went wrong');
+        btn.innerHTML = 'Create & Get Link 🔗';
+        btn.disabled = false;
+      }
+    } catch(e) {
+      document.getElementById('upload-error').textContent = '⚠️ Upload failed. Check connection.';
+      btn.innerHTML = 'Create & Get Link 🔗';
+      btn.disabled = false;
+    }
+  });
+
+  // COPY
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const link = document.getElementById('link-box').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+      document.getElementById('copy-btn').textContent = '✅ Copied!';
+      setTimeout(() => document.getElementById('copy-btn').textContent = '📋 Copy Link', 2000);
+    });
+  });
+
+  // NEW PUZZLE
+  document.getElementById('new-btn').addEventListener('click', () => {
+    document.getElementById('photo-input').value = '';
+    document.getElementById('thumb').style.display = 'none';
+    document.getElementById('msg-input').value = '';
+    document.getElementById('success-box').style.display = 'none';
+    document.getElementById('create-btn').disabled = true;
+  });
+</script>
+</body>
+</html>
+
